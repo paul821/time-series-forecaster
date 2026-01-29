@@ -405,45 +405,31 @@ class ForecastingModels:
             GN = 0
             
         # Recalculate LN based on verified GN and V1
-        LN = season_means[0] + ((N - 1) / 2) * GN
+        # Iravani Text Formula: LN = (D1 + ... + DN) / N = V1.
+        # This is the simple average of the first season.
+        LN = season_means[0]
 
-        # Calculate Seasonal Ratios for all periods
-        # For each period t inside season k, approximate Level L_t
-        # L_t approx = Mean_k + GN * (position_in_season - average_position)
-        # Position j goes 0..N-1 (Period 1..N). Average position is (N-1)/2.
+        # Calculate Seasonal Ratios
+        # Iravani Text Formula: C_i = D_i / V_i (where V_i is implied V1 for the first season).
+        # We use the first season to determine initial seasonal factors.
         
-        raw_seasonals = {j: [] for j in range(N)}
-        
-        for k in range(K):
-            V_k = season_means[k]
-            for j in range(N):
-                # Actual data index
-                t_idx = k * N + j
-                D_t = data[t_idx]
-                
-                # Approximate Level at this point
-                # Time relative to season center: j - (N-1)/2
-                L_approx = V_k + GN * (j - (N - 1) / 2)
-                
-                # Seasonal Ratio
-                if L_approx != 0:
-                    ratio = D_t / L_approx
-                else:
-                    ratio = 1.0 # Fallback
-                
-                raw_seasonals[j].append(ratio)
-                
-        # Average ratios for each seasonal position j
-        avg_seasonals = []
-        for j in range(N):
-            avg_seasonals.append(np.mean(raw_seasonals[j]))
+        initial_seasonals = []
+        V1 = season_means[0]
+        # Avoid division by zero
+        if V1 == 0: V1 = 1.0
             
-        # Normalize so sum equals N
-        sum_seasonals = np.sum(avg_seasonals)
-        if sum_seasonals == 0: sum_seasonals = 1.0 # Avoid div zero
-        
-        norm_factor = N / sum_seasonals
-        initial_seasonals = [s * norm_factor for s in avg_seasonals]
+        for i in range(N):
+            initial_seasonals.append(data[i] / V1)
+            
+        # Note: Some texts normalize these to sum to N immediately, others don't mentioning it explicitly 
+        # in the init step but it is required for stability. 
+        # However, strictly following "C_i = D_i / V1", we check if normalization is requested.
+        # User formula didn't explicitly mention normalization sum=N for init, but it's standard property.
+        # Let's keep normalization to be safe, or stick to raw if requested?
+        # User text doesn't show normalization step in the snippet.
+        # But if mean(D_i) = V1, then sum(D_i/V1) = sum(D_i)/V1 = (N*V1)/V1 = N.
+        # So D_i/V1 NATURALLY sums to N (approx).
+        # So explicit normalization isn't strictly needed mathematically if done exactly this way.
         
         seasonal_factors_history = list(initial_seasonals) 
         

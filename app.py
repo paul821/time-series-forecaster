@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from forecasting import ForecastingModels
 
 st.set_page_config(page_title="Forecasting App", layout="wide")
-st.title("Time Series Forecasting App (v1.2)")
+st.title("Time Series Forecasting App (v1.3)")
 
 # --------------------------
 # Session State Initialization
