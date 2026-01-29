@@ -386,33 +386,73 @@ class ForecastingModels:
         LN = V1 + ((N - 1) / 2) * GN
         
         # Initial Seasonal Factors C_1 ... C_N
-        # C_i = D_i / V1  (Eq 3007)
-        # Stored in a list or array.
-        # Note: We need to store seasonal factors in a way we can access C_{t-N}.
-        # We can Initialize a list of Seasonals.
-        initial_seasonals = [data[i]/V1 for i in range(N)]
+        # Iravani / Standard Winter's Method Improvement:
+        # Use ALL K seasons to estimate seasonal indices, not just the first one.
+        # We also de-trend the data within each season to get pure seasonality.
         
-        # We need to maintain the history of seasonal factors.
-        # Let's pre-fill the 'seasonals' array with initial values for the first N periods?
-        # No, C_t is computed at end of period t. C1...CN are computed "initially".
-        # So at t=N-1 (Period N), we have C_N.
+        # We need average of each season k=1..K
+        season_means = []
+        for k in range(K):
+            # Data for season k (0-based index)
+            s_data = data[k*N : (k+1)*N]
+            season_means.append(np.mean(s_data))
+            
+        # Re-verify GN using first and last season means calculated above
+        # GN formula: (V_K - V_1) / (N * (K-1))
+        if K > 1:
+            GN = (season_means[-1] - season_means[0]) / (N * (K - 1))
+        else:
+            GN = 0
+            
+        # Recalculate LN based on verified GN and V1
+        LN = season_means[0] + ((N - 1) / 2) * GN
+
+        # Calculate Seasonal Ratios for all periods
+        # For each period t inside season k, approximate Level L_t
+        # L_t approx = Mean_k + GN * (position_in_season - average_position)
+        # Position j goes 0..N-1 (Period 1..N). Average position is (N-1)/2.
         
-        # Tracking variables
-        prev_L = LN
-        prev_G = GN
-        # History of seasonals. We need C_{t-N}.
-        # At step t (Period t+1 we are forecasting), we need C_{t+1-N}.
-        # Wait, indexing.
-        # Data index i corresponds to Period i+1.
-        # Forecasting Period i+1 (index i).
-        # Starts at i = N (Period N+1).
+        raw_seasonals = {j: [] for j in range(N)}
         
-        # We need a list of ALL seasonal factors computed so far.
-        # Initial list: C_1 ... C_N.
+        for k in range(K):
+            V_k = season_means[k]
+            for j in range(N):
+                # Actual data index
+                t_idx = k * N + j
+                D_t = data[t_idx]
+                
+                # Approximate Level at this point
+                # Time relative to season center: j - (N-1)/2
+                L_approx = V_k + GN * (j - (N - 1) / 2)
+                
+                # Seasonal Ratio
+                if L_approx != 0:
+                    ratio = D_t / L_approx
+                else:
+                    ratio = 1.0 # Fallback
+                
+                raw_seasonals[j].append(ratio)
+                
+        # Average ratios for each seasonal position j
+        avg_seasonals = []
+        for j in range(N):
+            avg_seasonals.append(np.mean(raw_seasonals[j]))
+            
+        # Normalize so sum equals N
+        sum_seasonals = np.sum(avg_seasonals)
+        if sum_seasonals == 0: sum_seasonals = 1.0 # Avoid div zero
+        
+        norm_factor = N / sum_seasonals
+        initial_seasonals = [s * norm_factor for s in avg_seasonals]
+        
         seasonal_factors_history = list(initial_seasonals) 
         
         # Note: seasonal_factors_history[k] corresponds to Period k+1.
         # e.g. history[0] is C1.
+        
+        # Tracking variables
+        prev_L = LN
+        prev_G = GN
         
         # Records for plotting
         # Fill first N with NaNs or initial values?
