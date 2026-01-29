@@ -77,8 +77,23 @@ confidence_level = confidence_interval_pct / 100.0
 # Main Panel - Data Input
 # --------------------------
 st.subheader("Data Input")
-edited_df = st.data_editor(st.session_state.data, num_rows="dynamic")
-st.session_state.data = edited_df
+
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("Add Row"):
+        # Add a new row with 0 or last value
+        new_index = len(st.session_state.data)
+        st.session_state.data.loc[new_index] = {"Demand": 0}
+        
+with col2:
+    if st.button("Delete Last Row"):
+        if len(st.session_state.data) > 0:
+            st.session_state.data = st.session_state.data.iloc[:-1]
+
+edited_df = st.data_editor(st.session_state.data, num_rows="dynamic", key="data_editor")
+# Sync editor changes back to session state if they happen
+if not edited_df.equals(st.session_state.data):
+    st.session_state.data = edited_df
 
 data_values = st.session_state.data["Demand"].dropna().values
 
