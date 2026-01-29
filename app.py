@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from forecasting import ForecastingModels
 
 st.set_page_config(page_title="Forecasting App", layout="wide")
-st.title("Time Series Forecasting App")
+st.title("Time Series Forecasting App (v1.1)")
 
 # --------------------------
 # Session State Initialization
@@ -95,7 +95,15 @@ edited_df = st.data_editor(st.session_state.data, num_rows="dynamic", key="data_
 if not edited_df.equals(st.session_state.data):
     st.session_state.data = edited_df
 
-data_values = st.session_state.data["Demand"].dropna().values
+data_series = st.session_state.data["Demand"]
+# Ensure numeric
+data_series_numeric = pd.to_numeric(data_series, errors='coerce')
+
+if data_series_numeric.isna().any():
+    st.error("Input contains invalid non-numeric data. Please clean your data.")
+    st.stop()
+
+data_values = data_series_numeric.dropna().values
 
 if len(data_values) < 2:
     st.warning("Please enter at least 2 data points.")
