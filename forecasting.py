@@ -379,10 +379,11 @@ class ForecastingModels:
             GN = 0
 
         # L_N = V1 (Line 3003: L_N = D1...DN / N = V1)
-        # Wait, if L_N (Level at end of season 1) is just Avg of Season 1, 
-        # it ignores the trend within Season 1?
-        # Yes, the book formula 3003 explicitly says L_N = Mean(Season 1).
-        LN = V1
+        # Corrected per Iravani/Standard Winter's: L_N should be the level at the END of season 1.
+        # V1 is the average level of season 1, roughly corresponding to the middle of the season.
+        # We adjust V1 by the trend to get L_N.
+        # L_N = V1 + ((N - 1) / 2) * G_N
+        LN = V1 + ((N - 1) / 2) * GN
         
         # Initial Seasonal Factors C_1 ... C_N
         # C_i = D_i / V1  (Eq 3007)
