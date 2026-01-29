@@ -13,10 +13,15 @@ class ForecastingModels:
         Calculate error metrics: BIAS, MSE, MAD, MAPE, SSE.
         actual and forecast should be numpy arrays of the same length (trimmed to overlap).
         """
-        actual = np.array(actual)
-        forecast = np.array(forecast)
+        actual = pd.to_numeric(actual, errors='coerce')
+        forecast = pd.to_numeric(forecast, errors='coerce')
         
         # Filter out NaN in forecast or actual (if any)
+        # This handles both original NaNs and those introduced by coercion
+        # Ensure we have numpy arrays of float type to avoid TypeError with isnan on objects
+        actual = np.array(actual, dtype=float)
+        forecast = np.array(forecast, dtype=float)
+
         mask = ~np.isnan(actual) & ~np.isnan(forecast)
         actual = actual[mask]
         forecast = forecast[mask]
