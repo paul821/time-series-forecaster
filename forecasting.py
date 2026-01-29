@@ -418,9 +418,13 @@ class ForecastingModels:
         # Fill first N with NaNs or initial values?
         # Fitted values are NaNs.
         for i in range(N):
-            level[i] = np.nan # Or maybe backfill? Book doesn't.
+            level[i] = np.nan 
             trend[i] = np.nan
             seasonals[i] = initial_seasonals[i]
+
+        # Populate the initialized values at the end of the initialization period (Index N-1, Period N)
+        level[N-1] = LN
+        trend[N-1] = GN
         
         # Start iterating from t = N (Period N+1)
         for t in range(N, n):
